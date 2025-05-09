@@ -1,0 +1,54 @@
+package hubspot
+
+import (
+	"errors"
+	"strings"
+
+	"github.com/gauravgahlot/syncroot/internal/types"
+)
+
+type HubspotTransformer struct{}
+
+func (t HubspotTransformer) ToProvider(input interface{}) (interface{}, error) {
+	contact, ok := input.(*types.Contact)
+	if !ok {
+		return nil, errors.New("invalid type provided")
+	}
+
+	parts := strings.Fields(contact.FullName)
+	first, last := "", ""
+	if len(parts) > 0 {
+		first = parts[0]
+	}
+	if len(parts) > 1 {
+		last = strings.Join(parts[1:], " ")
+	}
+
+	return &Contact{
+		ID:          contact.ID,
+		Email:       contact.Email,
+		PhoneNumber: contact.Phone,
+		CreatedAt:   contact.CreatedAt,
+		UpdatedAt:   contact.UpdatedAt,
+		FirstName:   first,
+		LastName:    last,
+	}, nil
+}
+
+func (t HubspotTransformer) FromProvider(input interface{}) (interface{}, error) {
+	sfContact, ok := input.(*Contact)
+	if !ok {
+		return nil, errors.New("invalid type provided")
+	}
+
+	fullName := strings.TrimSpace(sfContact.FirstName + " " + sfContact.LastName)
+
+	return &types.Contact{
+		ID:        sfContact.ID,
+		FullName:  fullName,
+		Email:     sfContact.Email,
+		Phone:     sfContact.PhoneNumber,
+		CreatedAt: sfContact.CreatedAt,
+		UpdatedAt: sfContact.UpdatedAt,
+	}, nil
+}
