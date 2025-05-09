@@ -1,0 +1,249 @@
+openapi: 3.0.3
+info:
+  title: API Reference
+  description: |
+    Syncroot is a secure API service that automates data synchronization with multiple
+    CRM Providers.
+    
+    The synchronization occurs record-by-record.
+  version: 1.0.0
+  contact:
+    name: Sync Team
+
+servers:
+  - url: https://dev.syncroot.io
+    description: Dev server
+  - url: https://qa.syncroot.io
+    description: QA server
+  - url: https://staging.syncroot.io
+    description: Staging server
+  - url: https://prod.syncroot.io
+    description: Production server
+
+security:
+  - bearerAuth: []
+  
+paths:
+  /records:
+    post:
+      tags:
+        - Syncroot API
+      summary: Create a new record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Record'
+      responses:
+        "201":
+          description: Record created successfully
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  
+  /records/{id}:
+    get:
+      tags:
+        - Syncroot API
+      summary: Retrieve a record by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Record found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Record'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Syncroot API
+      summary: Update a record by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Record'
+      responses:
+        "200":
+          description: Record updated successfully
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+    
+    delete:
+      tags:
+        - Syncroot API
+      summary: Delete a record by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Record deleted successfully
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+          
+  /webhooks/{provider}:
+    parameters: 
+      - name: provider
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [hubspot, salesforce]
+    post:
+      tags:
+        - Syncroot API
+      summary: Webhook receiver for CRM Providers
+      description: |
+        Receives change events (create, update, delete) from CRM providers 
+        and queues them for synchronization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw webhook payload (provider-specific)
+              additionalProperties: true
+      responses:
+        "202":
+          description: Webhook accepted
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  /healthz:
+    get:
+      tags:
+        - Syncroot API
+      summary: Health check endpoint
+      description: Liveness and readiness probe for the service.
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+        "503":
+          $ref: '#/components/responses/ServiceUnavailable'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Use the `Authorization` header with the value `Bearer {token}` to authenticate.
+        Example: `Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+
+  schemas:
+    Record:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+        - full_name
+        - email
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: invalid_request
+        message:
+          type: string
+          description: Human-readable error message
+          example: The request was invalid
+      required:
+        - code
+        - message
+
+  responses:
+    BadRequest:
+      description: Bad request - The request was invalid or cannot be served
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: invalid_request
+            message: The request was invalid
+
+    NotFound:
+      description: Not found - The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: not_found
+            message: The requested resource was not found
+
+    InternalServerError:
+      description: Internal server error - Something went wrong on the server
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: internal_server_error
+            message: An unexpected error occurred
+    
+    ServiceUnavailable:
+      description: Service unavailable - The service is temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: service_unavailable
+            message: The service is temporarily unavailable      
