@@ -17,5 +17,5 @@ type Transformer interface {
 // the Transformer interface.
 var (
 	_ Transformer = &salesforce.SFTransformer{}
-	_ Transformer = &hubspot.HubspotTransformer{}
+	_ Transformer = &hubspot.HubSpotTransformer{}
 )

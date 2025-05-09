@@ -2,53 +2,50 @@ package hubspot
 
 import (
 	"errors"
-	"strings"
-
-	"github.com/gauravgahlot/syncroot/internal/types"
+	"reflect"
 )
 
-type HubspotTransformer struct{}
-
-func (t HubspotTransformer) ToProvider(input interface{}) (interface{}, error) {
-	contact, ok := input.(*types.Contact)
-	if !ok {
-		return nil, errors.New("invalid type provided")
-	}
-
-	parts := strings.Fields(contact.FullName)
-	first, last := "", ""
-	if len(parts) > 0 {
-		first = parts[0]
-	}
-	if len(parts) > 1 {
-		last = strings.Join(parts[1:], " ")
-	}
-
-	return &Contact{
-		ID:          contact.ID,
-		Email:       contact.Email,
-		PhoneNumber: contact.Phone,
-		CreatedAt:   contact.CreatedAt,
-		UpdatedAt:   contact.UpdatedAt,
-		FirstName:   first,
-		LastName:    last,
-	}, nil
+type transformer interface {
+	toProvider(input interface{}) (interface{}, error)
+	fromProvider(input interface{}) (interface{}, error)
 }
 
-func (t HubspotTransformer) FromProvider(input interface{}) (interface{}, error) {
-	sfContact, ok := input.(*Contact)
+type HubSpotTransformer struct {
+	registry map[string]transformer
+}
+
+func NewHubSpotTransformer() *HubSpotTransformer {
+	return &HubSpotTransformer{
+		registry: map[string]transformer{
+			"Contact": contactTf{},
+			// Future: "Deal": DealTransformer{},
+		},
+	}
+}
+
+func (t HubSpotTransformer) ToProvider(input interface{}) (interface{}, error) {
+	typeName := getTypeName(input)
+	transformer, ok := t.registry[typeName]
 	if !ok {
-		return nil, errors.New("invalid type provided")
+		return nil, errors.New("no transformer registered for type " + typeName)
+	}
+	return transformer.toProvider(input)
+}
+
+func (t HubSpotTransformer) FromProvider(input interface{}) (interface{}, error) {
+	typeName := getTypeName(input)
+	transformer, ok := t.registry[typeName]
+	if !ok {
+		return nil, errors.New("no transformer registered for type " + typeName)
+	}
+	return transformer.fromProvider(input)
+}
+
+func getTypeName(v interface{}) string {
+	typ := reflect.TypeOf(v)
+	if typ.Kind() == reflect.Ptr {
+		return typ.Elem().Name()
 	}
 
-	fullName := strings.TrimSpace(sfContact.FirstName + " " + sfContact.LastName)
-
-	return &types.Contact{
-		ID:        sfContact.ID,
-		FullName:  fullName,
-		Email:     sfContact.Email,
-		Phone:     sfContact.PhoneNumber,
-		CreatedAt: sfContact.CreatedAt,
-		UpdatedAt: sfContact.UpdatedAt,
-	}, nil
+	return typ.Name()
 }
