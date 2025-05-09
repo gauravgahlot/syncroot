@@ -11,6 +11,8 @@ info:
     name: Sync Team
 
 servers:
+  - url: /
+    description: Local server
   - url: https://dev.syncroot.io
     description: Dev server
   - url: https://qa.syncroot.io
@@ -24,30 +26,30 @@ security:
   - bearerAuth: []
   
 paths:
-  /records:
+  /contacts:
     post:
       tags:
         - Syncroot API
-      summary: Create a new record
+      summary: Create a new contact.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Record'
+              $ref: '#/components/schemas/Contact'
       responses:
         "201":
-          description: Record created successfully
+          description: Contact created successfully
         "400":
           $ref: '#/components/responses/BadRequest'
         "500":
           $ref: '#/components/responses/InternalServerError'
   
-  /records/{id}:
+  /contacts/{id}:
     get:
       tags:
         - Syncroot API
-      summary: Retrieve a record by ID
+      summary: Retrieve a contact by ID
       parameters:
         - name: id
           in: path
@@ -57,11 +59,11 @@ paths:
             format: uuid
       responses:
         "200":
-          description: Record found
+          description: Contact found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Record'
+                $ref: '#/components/schemas/Contact'
         "400":
           $ref: '#/components/responses/BadRequest'
         "404":
@@ -72,7 +74,7 @@ paths:
     put:
       tags:
         - Syncroot API
-      summary: Update a record by ID
+      summary: Update a contact by ID
       parameters:
         - name: id
           in: path
@@ -85,10 +87,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Record'
+              $ref: '#/components/schemas/Contact'
       responses:
         "200":
-          description: Record updated successfully
+          description: Contact updated successfully
         "400":
           $ref: '#/components/responses/BadRequest'
         "404":
@@ -99,7 +101,7 @@ paths:
     delete:
       tags:
         - Syncroot API
-      summary: Delete a record by ID
+      summary: Delete a contact by ID
       parameters:
         - name: id
           in: path
@@ -109,7 +111,7 @@ paths:
             format: uuid
       responses:
         "204":
-          description: Record deleted successfully
+          description: Contact deleted successfully
         "400":
           $ref: '#/components/responses/BadRequest'
         "404":
@@ -151,7 +153,7 @@ paths:
       tags:
         - Syncroot API
       summary: Health check endpoint
-      description: Liveness and readiness probe for the service.
+      description: Endpoint to check the service health.
       responses:
         "200":
           description: Service is healthy
@@ -177,7 +179,7 @@ components:
         Example: `Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
 
   schemas:
-    Record:
+    Contact:
       type: object
       properties:
         id:
@@ -188,6 +190,9 @@ components:
         email:
           type: string
           format: email
+        phone:
+          type: string
+          format: phone
       required:
         - full_name
         - email
