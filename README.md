@@ -8,6 +8,7 @@ SyncRoot is a data synchronization service that allows you to manage contacts ac
 - [Architecture](#architecture)
 - [Features](#features)
 - [Components](#components)
+- [Design Decisions](#design-decisions)
 - [API Endpoints](#api-endpoints)
 - [Request Flow](#request-flow)
 - [Getting Started](#getting-started)
@@ -39,6 +40,10 @@ graph TD
     I -->|Store Changes| D
 ```
 
+- The message queue implementation uses Kafka to provide a robust, scalable, and distributed messaging system. 
+- Topic-based queuing allows segregation of messages per provider, enabling efficient processing and easier error isolation.
+- The Dead-Letter Queue (DLQ) is used to handle failed messages, ensuring that problematic messages do not block the pipeline and can be retried or examined later.
+
 ## Features
 
 - CRUD operations for contacts
@@ -56,9 +61,9 @@ Exposes RESTful endpoints for managing contacts and other resources.
 
 ### Workers
 
-- **Forwarder Worker**: Processes messages from the queue, stores data in the database, and forwards to providers
-- **DLQ Handler Worker**: Processes failed messages from the Dead-Letter Queue
-- **Webhook Handler Worker**: Processes webhooks from providers that are queued in provider-specific topics
+- **Forwarder Worker**: Processes messages from the queue, stores data in the database, and forwards to providers. Implements retry strategies with exponential backoff to handle transient failures.
+- **DLQ Handler Worker**: Processes failed messages from the Dead-Letter Queue with backoff and alerting mechanisms.
+- **Webhook Handler Worker**: Processes webhooks from providers that are queued in provider-specific topics. Also supports retry and backoff strategies to ensure reliable processing.
 
 ### Database
 
@@ -71,9 +76,23 @@ Integrations with CRM systems:
 - Salesforce
 - HubSpot
 
+Adding a new provider requires implementing a new transformer for data format conversion and binding the provider to a new queue/topic for message handling.
+
 ### Transformers
 
-Convert data between internal format and provider-specific formats.
+Bi-directional transformers convert data between the internal format and provider-specific formats. These transformers are pluggable, allowing easy addition of new providers and custom transformation logic.
+
+### Security
+
+SyncRoot uses bearer token authentication to secure API endpoints. Additionally, webhook endpoints can optionally validate signatures to ensure authenticity and integrity of incoming requests from providers.
+
+## Design Decisions
+
+- **Message-driven architecture**: Enables asynchronous processing, scalability, and decoupling between components.
+- **Dead-Letter Queue (DLQ) for resilience**: Ensures that failed messages are isolated and can be retried or analyzed without blocking the main processing pipeline.
+- **OpenAPI-based validation**: Provides strict input validation to maintain API consistency and prevent malformed requests.
+- **Bi-directional transformers**: Facilitate seamless data conversion between internal and provider formats, supporting synchronization in both directions.
+- **Topic-per-provider queue design**: Allows fine-grained control over message processing per provider, improving fault isolation and scalability.
 
 ## API Endpoints
 
@@ -98,7 +117,8 @@ Convert data between internal format and provider-specific formats.
 4. Forwarder worker picks up the message
 5. Contact is stored in the database
 6. Contact is transformed and sent to each provider (Salesforce, HubSpot)
-7. If any provider integration fails, the message is sent to DLQ for retry
+7. If any provider integration fails, the message is sent to DLQ for retry with backoff
+8. The system ensures eventual consistency by retrying failed messages until successful or manual intervention
 
 ### Webhook Flow
 
@@ -109,54 +129,5 @@ Convert data between internal format and provider-specific formats.
 5. The worker processes the data, transforming it from provider format to internal format
 6. The updated data is stored in the database, ensuring consistency across the system
 7. If necessary, the change is propagated to other providers to keep all systems in sync
+8. Retry and backoff mechanisms handle transient failures, ensuring eventual consistency
 
-## Getting Started
-
-### Prerequisites
-
-- Go 1.18+
-- Docker and Docker Compose (for local development)
-- Kafka (for production deployment)
-
-### Installation
-
-1. Clone the repository
-
-```bash
-git clone https://github.com/your-username/syncroot.git
-cd syncroot
-```
-
-2. Build the application
-
-```bash
-make build
-```
-
-3. Run the application
-
-```bash
-make run
-```
-
-## Development
-
-### Running Tests
-
-```bash
-make test
-```
-
-### Code Coverage
-
-```bash
-make coverage
-```
-
-## Deployment
-
-SyncRoot can be deployed using Kubernetes. Helm charts are provided in the `charts/` directory.
-
-```bash
-helm install syncroot ./charts/syncroot -f your-values.yaml
-```
