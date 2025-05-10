@@ -11,9 +11,6 @@ SyncRoot is a data synchronization service that allows you to manage contacts ac
 - [Design Decisions](#design-decisions)
 - [API Endpoints](#api-endpoints)
 - [Request Flow](#request-flow)
-- [Getting Started](#getting-started)
-- [Development](#development)
-- [Deployment](#deployment)
 
 ## Overview
 
@@ -86,6 +83,10 @@ Bi-directional transformers convert data between the internal format and provide
 
 SyncRoot uses bearer token authentication to secure API endpoints. Additionally, webhook endpoints can optionally validate signatures to ensure authenticity and integrity of incoming requests from providers.
 
+### Monitoring & Observability
+
+SyncRoot integrates with Prometheus for metrics collection, Zap for structured logging, and optionally supports OpenTelemetry traces. Alerts can be configured via Grafana or other Prometheus-compatible alert managers.
+
 ## Design Decisions
 
 - **Message-driven architecture**: Enables asynchronous processing, scalability, and decoupling between components.
@@ -93,6 +94,7 @@ SyncRoot uses bearer token authentication to secure API endpoints. Additionally,
 - **OpenAPI-based validation**: Provides strict input validation to maintain API consistency and prevent malformed requests.
 - **Bi-directional transformers**: Facilitate seamless data conversion between internal and provider formats, supporting synchronization in both directions.
 - **Topic-per-provider queue design**: Allows fine-grained control over message processing per provider, improving fault isolation and scalability.
+- **Kafka for messaging**: Chosen for its durability, scalability, and mature ecosystem supporting high-throughput, fault-tolerant, distributed streaming use cases.
 
 ## API Endpoints
 
@@ -130,4 +132,3 @@ SyncRoot uses bearer token authentication to secure API endpoints. Additionally,
 6. The updated data is stored in the database, ensuring consistency across the system
 7. If necessary, the change is propagated to other providers to keep all systems in sync
 8. Retry and backoff mechanisms handle transient failures, ensuring eventual consistency
-
