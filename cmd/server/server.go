@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/gauravgahlot/syncroot/internal/config"
+	"github.com/gauravgahlot/syncroot/internal/enqueuer"
 	"github.com/gauravgahlot/syncroot/internal/handlers"
 	"github.com/gauravgahlot/syncroot/internal/middleware"
 )
@@ -34,8 +35,13 @@ func runE(ctx context.Context, logger *zap.Logger, cfg *config.Config) error {
 		return fmt.Errorf("failed to create router: %w", err)
 	}
 
+	en, err := enqueuer.NewEnqueuer(logger)
+	if err != nil {
+		return fmt.Errorf("failed to initialize enqueuer: %w", err)
+	}
+
 	mux := http.NewServeMux()
-	contactHandler := handlers.NewContactHandler(logger)
+	contactHandler := handlers.NewContactHandler(logger, en, cfg.Forwarder.Topic)
 
 	// register API routes
 	mux.HandleFunc("GET /healthz", handlers.Health)

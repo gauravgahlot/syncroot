@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/gauravgahlot/syncroot/cmd/server"
+	"github.com/gauravgahlot/syncroot/cmd/worker"
 	"github.com/gauravgahlot/syncroot/internal/config"
 )
 
@@ -16,6 +17,7 @@ func Command(log *zap.Logger, cfg *config.Config) *cobra.Command {
 	}
 
 	cmd.AddCommand(server.Command(log, cfg))
+	cmd.AddCommand(worker.Command(log, cfg))
 
 	return cmd
 }
