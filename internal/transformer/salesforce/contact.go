@@ -25,7 +25,7 @@ type Name struct {
 // contactTf handles transformation logic for Contact.
 type contactTf struct{}
 
-func (t contactTf) toProvider(input interface{}) (interface{}, error) {
+func (t contactTf) toProvider(input types.Object) (interface{}, error) {
 	contact, ok := input.(*types.Contact)
 	if !ok {
 		return nil, errors.New("invalid type provided to ContactTransformer")
@@ -53,7 +53,7 @@ func (t contactTf) toProvider(input interface{}) (interface{}, error) {
 	}, nil
 }
 
-func (t contactTf) fromProvider(input interface{}) (interface{}, error) {
+func (t contactTf) fromProvider(input interface{}) (types.Object, error) {
 	sfContact, ok := input.(*Contact)
 	if !ok {
 		return nil, errors.New("invalid type provided to ContactTransformer")

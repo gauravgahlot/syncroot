@@ -3,11 +3,13 @@ package salesforce
 import (
 	"errors"
 	"reflect"
+
+	"github.com/gauravgahlot/syncroot/internal/types"
 )
 
 type transformer interface {
-	toProvider(input interface{}) (interface{}, error)
-	fromProvider(input interface{}) (interface{}, error)
+	toProvider(input types.Object) (interface{}, error)
+	fromProvider(input interface{}) (types.Object, error)
 }
 
 type SFTransformer struct {
@@ -23,21 +25,23 @@ func NewSFTransformer() *SFTransformer {
 	}
 }
 
-func (t SFTransformer) ToProvider(input interface{}) (interface{}, error) {
-	typeName := getTypeName(input)
+func (t SFTransformer) ToProvider(input types.Object) (interface{}, error) {
+	typeName := input.GetType()
 	transformer, ok := t.registry[typeName]
 	if !ok {
 		return nil, errors.New("no transformer registered for type " + typeName)
 	}
+
 	return transformer.toProvider(input)
 }
 
-func (t SFTransformer) FromProvider(input interface{}) (interface{}, error) {
+func (t SFTransformer) FromProvider(input interface{}) (types.Object, error) {
 	typeName := getTypeName(input)
 	transformer, ok := t.registry[typeName]
 	if !ok {
 		return nil, errors.New("no transformer registered for type " + typeName)
 	}
+
 	return transformer.fromProvider(input)
 }
 

@@ -4,16 +4,22 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gauravgahlot/syncroot/internal/enqueuer"
+	"github.com/gauravgahlot/syncroot/internal/types"
 	"go.uber.org/zap"
 )
 
 type contactHandler struct {
-	logger *zap.Logger
+	logger   *zap.Logger
+	enqueuer enqueuer.Enqueuer
+	topic    string
 }
 
-func NewContactHandler(logger *zap.Logger) *contactHandler {
+func NewContactHandler(logger *zap.Logger, eq enqueuer.Enqueuer, topic string) *contactHandler {
 	return &contactHandler{
-		logger: logger,
+		logger:   logger,
+		enqueuer: eq,
+		topic:    topic,
 	}
 }
 
@@ -21,7 +27,7 @@ func NewContactHandler(logger *zap.Logger) *contactHandler {
 func (h *contactHandler) CreateContact(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("creating contact")
 
-	var contact map[string]string
+	var contact types.Contact
 	if err := json.NewDecoder(r.Body).Decode(&contact); err != nil {
 		h.logger.Error("failed to decode request body", zap.Error(err))
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -29,9 +35,18 @@ func (h *contactHandler) CreateContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// simulate saving contact to a database
+	// enqueue contact for processing
+	err := h.enqueuer.Enqueue(enqueuer.EnqueueRequest{
+		Operation: types.OperationCreate,
+		Object:    &contact,
+		Topic:     h.topic,
+	})
+	if err != nil {
+		// handle error
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Contact created successfully"))
 }
 
 // GetContact handles GET /contacts/{id} requests.
@@ -53,17 +68,39 @@ func (h *contactHandler) GetContact(w http.ResponseWriter, r *http.Request) {
 // UpdateContact handles PUT /contacts/{id} requests.
 func (h *contactHandler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 	contactID := r.PathValue("id")
-	h.logger.Info("updating contact", zap.String("id", contactID))
+
+	// enqueue contact for processing
+	err := h.enqueuer.Enqueue(enqueuer.EnqueueRequest{
+		Operation: types.OperationUpdate,
+		Object: &types.Contact{
+			ID: contactID,
+		},
+		Topic: h.topic,
+	})
+	if err != nil {
+		// handle error
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Contact updated successfully"))
 }
 
 // DeleteContact handles DELETE /contacts/{id} requests.
 func (h *contactHandler) DeleteContact(w http.ResponseWriter, r *http.Request) {
 	contactID := r.PathValue("id")
-	h.logger.Info("deleting contact", zap.String("id", contactID))
+
+	// enqueue contact for processing
+	err := h.enqueuer.Enqueue(enqueuer.EnqueueRequest{
+		Operation: types.OperationDelete,
+		Object: &types.Contact{
+			ID: contactID,
+		},
+		Topic: h.topic,
+	})
+	if err != nil {
+		// handle error
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 
 	w.WriteHeader(http.StatusNoContent)
-	w.Write([]byte("Contact deleted successfully"))
 }

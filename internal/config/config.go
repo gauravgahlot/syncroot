@@ -6,9 +6,12 @@ import (
 
 // Config holds the configuration for Syncroot.
 type Config struct {
-	Environment string `default:"development" split_words:"true"`
-	Server      Server
-	Worker      Worker
+	Environment    string `default:"development" split_words:"true"`
+	Server         Server
+	Forwarder      Worker
+	Syncer         Worker
+	DLQHandler     Worker `split_words:"true"`
+	WebhookHandler Worker `split_words:"true"`
 }
 
 // Server holds the server configuration.
@@ -16,16 +19,9 @@ type Server struct {
 	Port int `default:"3000"`
 }
 
-type WorkerType string
-
-const (
-	Forwarder WorkerType = "forwarder"
-	Syncer    WorkerType = "syncer"
-)
-
 type Worker struct {
-	Count int        `default:"1"`
-	Type  WorkerType `default:"forwarder"`
+	Count int `default:"1"`
+	Topic string
 }
 
 func NewFromEnv() (*Config, error) {
